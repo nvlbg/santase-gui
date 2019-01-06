@@ -57,6 +57,32 @@ func createImage(card santase.Card) *ebiten.Image {
 	return createImageFromPath(path)
 }
 
+type card struct {
+	card    *santase.Card
+	rect    image.Rectangle
+	image   *ebiten.Image
+	x       int
+	y       int
+	zIndex  int
+	flipped bool
+}
+
+func (c *card) draw(screen *ebiten.Image) {
+	width, height := c.image.Size()
+	opts := ebiten.DrawImageOptions{}
+	opts.GeoM.Translate(-float64(width)/2, -float64(height)/2)
+	opts.GeoM.Scale(0.2, 0.2)
+	if c.flipped {
+		opts.GeoM.Rotate(1.570796)
+	}
+	opts.GeoM.Translate(float64(c.x), float64(c.y))
+	screen.DrawImage(c.image, &opts)
+}
+
+func (c *card) intersects(x, y int) bool {
+	return x >= c.rect.Min.X && x <= c.rect.Max.X && y >= c.rect.Min.Y && y <= c.rect.Max.Y
+}
+
 type game struct {
 	trump          santase.Suit
 	hand           santase.Hand
@@ -67,9 +93,19 @@ type game struct {
 	response       *santase.Card
 	isOpponentMove bool
 	blockUI        bool
+	cards          map[santase.Card]*ebiten.Image
+	backCard       *ebiten.Image
+	movesChan      chan santase.Move
+	ai             santase.Game
 }
 
-func newGame() game {
+func NewGame() game {
+	cards := make(map[santase.Card]*ebiten.Image)
+	for _, card := range santase.AllCards {
+		cards[card] = createImage(card)
+	}
+	backCard := createImageFromPath("assets/red_back.png")
+
 	allCards := make([]santase.Card, 0, 24)
 	for _, card := range santase.AllCards {
 		allCards = append(allCards, card)
@@ -78,16 +114,26 @@ func newGame() game {
 		allCards[i], allCards[j] = allCards[j], allCards[i]
 	})
 
+	hand := santase.NewHand(allCards[:6]...)
+	opponentHand := santase.NewHand(allCards[6:12]...)
+	trumpCard := &allCards[12]
+	isOpponentMove := false
+	ai := santase.CreateGame(opponentHand, *trumpCard, !isOpponentMove)
+
 	return game{
 		trump:          allCards[12].Suit,
-		hand:           santase.NewHand(allCards[:6]...),
-		opponentHand:   santase.NewHand(allCards[6:12]...),
-		trumpCard:      &allCards[12],
+		hand:           hand,
+		opponentHand:   opponentHand,
+		trumpCard:      trumpCard,
 		stack:          allCards[13:],
 		cardPlayed:     nil,
 		response:       nil,
-		isOpponentMove: false,
+		isOpponentMove: isOpponentMove,
 		blockUI:        false,
+		cards:          cards,
+		backCard:       backCard,
+		movesChan:      make(chan santase.Move),
+		ai:             ai,
 	}
 }
 
@@ -115,23 +161,12 @@ func (g *game) getOpponentHand() []santase.Card {
 	return cards
 }
 
-type Card struct {
-	card    *santase.Card
-	rect    image.Rectangle
-	image   *ebiten.Image
-	x       int
-	y       int
-	zIndex  int
-	flipped bool
-}
-
-func NewCard(card *santase.Card, x, y, z int, flipped bool) *Card {
+func (g *game) newCard(c *santase.Card, x, y, z int, flipped bool) *card {
 	var img *ebiten.Image
-	if !currentGame.hand.HasCard(*card) && card != currentGame.trumpCard &&
-		card != currentGame.cardPlayed && card != currentGame.response {
-		img = backCard
+	if !g.hand.HasCard(*c) && c != g.trumpCard && c != g.cardPlayed && c != g.response {
+		img = g.backCard
 	} else {
-		img = cards[*card]
+		img = g.cards[*c]
 	}
 
 	width, height := img.Size()
@@ -143,8 +178,8 @@ func NewCard(card *santase.Card, x, y, z int, flipped bool) *Card {
 	width /= 5
 	height /= 5
 
-	return &Card{
-		card:    card,
+	return &card{
+		card:    c,
 		rect:    image.Rect(x-width/2, y-width/2, x+width/2, y+height/2),
 		image:   img,
 		x:       x,
@@ -154,48 +189,26 @@ func NewCard(card *santase.Card, x, y, z int, flipped bool) *Card {
 	}
 }
 
-func (c *Card) Draw(screen *ebiten.Image) {
-	width, height := c.image.Size()
-	opts := ebiten.DrawImageOptions{}
-	opts.GeoM.Translate(-float64(width)/2, -float64(height)/2)
-	opts.GeoM.Scale(0.2, 0.2)
-	if c.flipped {
-		opts.GeoM.Rotate(1.570796)
-	}
-	opts.GeoM.Translate(float64(c.x), float64(c.y))
-	screen.DrawImage(c.image, &opts)
-}
-
-func (c *Card) Intersects(x, y int) bool {
-	return x >= c.rect.Min.X && x <= c.rect.Max.X && y >= c.rect.Min.Y && y <= c.rect.Max.Y
-}
-
-var cards = make(map[santase.Card]*ebiten.Image)
-var backCard *ebiten.Image
-var currentGame game
-var gameAi santase.Game
-var movesChan chan santase.Move
-
-func playResponse(card *santase.Card) {
-	currentGame.response = card
-	currentGame.blockUI = true
+func (g *game) playResponse(card *santase.Card) {
+	g.response = card
+	g.blockUI = true
 	go func() {
 		<-time.After(2 * time.Second)
-		currentGame.blockUI = false
-		currentGame.cardPlayed = nil
-		currentGame.response = nil
+		g.blockUI = false
+		g.cardPlayed = nil
+		g.response = nil
 	}()
 }
 
-func update(screen *ebiten.Image) error {
+func (g *game) update(screen *ebiten.Image) error {
 	screen.Fill(color.NRGBA{0x00, 0xaa, 0x00, 0xff})
 
-	var objects []*Card
+	var objects []*card
 	cardX := 270
 	z := 0
-	for _, card := range currentGame.getHand() {
+	for _, card := range g.getHand() {
 		func(card santase.Card) {
-			objects = append(objects, NewCard(&card, cardX, 600, z, false))
+			objects = append(objects, g.newCard(&card, cardX, 600, z, false))
 			cardX += 80
 			z++
 		}(card)
@@ -203,89 +216,88 @@ func update(screen *ebiten.Image) error {
 
 	cardX = 270
 	z = 0
-	for _, card := range currentGame.getOpponentHand() {
+	for _, card := range g.getOpponentHand() {
 		func(card santase.Card) {
-			objects = append(objects, NewCard(&card, cardX, 120, z, false))
+			objects = append(objects, g.newCard(&card, cardX, 120, z, false))
 			cardX += 80
 			z++
 		}(card)
 	}
 
-	if currentGame.trumpCard != nil {
-		objects = append(objects, NewCard(currentGame.trumpCard, 120, 360, 0, true))
-		objects = append(objects, NewCard(&currentGame.stack[0], 84, 360, 1, false))
+	if g.trumpCard != nil {
+		objects = append(objects, g.newCard(g.trumpCard, 120, 360, 0, true))
+		objects = append(objects, g.newCard(&g.stack[0], 84, 360, 1, false))
 	}
 
-	if currentGame.cardPlayed != nil {
-		objects = append(objects, NewCard(currentGame.cardPlayed, 540, 360, 0, false))
+	if g.cardPlayed != nil {
+		objects = append(objects, g.newCard(g.cardPlayed, 540, 360, 0, false))
 	}
 
-	if currentGame.response != nil {
-		objects = append(objects, NewCard(currentGame.response, 500, 340, 1, false))
+	if g.response != nil {
+		objects = append(objects, g.newCard(g.response, 500, 340, 1, false))
 	}
 
 	x, y := ebiten.CursorPosition()
 
-	var selected *Card
+	var selected *card
 	for _, obj := range objects {
-		if obj.Intersects(x, y) && (selected == nil || selected.zIndex < obj.zIndex) {
+		if obj.intersects(x, y) && (selected == nil || selected.zIndex < obj.zIndex) {
 			selected = obj
 		}
 	}
 
-	if selected != nil && !currentGame.blockUI && ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
-		if !currentGame.isOpponentMove && currentGame.hand.HasCard(*selected.card) {
-			currentGame.isOpponentMove = true
-			currentGame.hand.RemoveCard(*selected.card)
-			if currentGame.cardPlayed == nil {
-				currentGame.cardPlayed = selected.card
+	if selected != nil && !g.blockUI && ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+		if !g.isOpponentMove && g.hand.HasCard(*selected.card) {
+			g.isOpponentMove = true
+			g.hand.RemoveCard(*selected.card)
+			if g.cardPlayed == nil {
+				g.cardPlayed = selected.card
 			} else {
-				playResponse(selected.card)
+				g.playResponse(selected.card)
 			}
 			move := santase.NewMove(*selected.card)
-			movesChan <- move
+			g.movesChan <- move
 		}
 	}
 
-	if selected != nil && currentGame.hand.HasCard(*selected.card) {
+	if selected != nil && g.hand.HasCard(*selected.card) {
 		selected.y -= 20
 		selected.rect.Sub(image.Pt(0, -20))
 	}
 
 	for _, obj := range objects {
-		obj.Draw(screen)
+		obj.draw(screen)
 	}
 
 	return nil
 }
 
-func main() {
-	for _, card := range santase.AllCards {
-		cards[card] = createImage(card)
-	}
-	backCard = createImageFromPath("assets/red_back.png")
-
-	currentGame = newGame()
-	gameAi = santase.CreateGame(currentGame.opponentHand, *currentGame.trumpCard, !currentGame.isOpponentMove)
-	movesChan = make(chan santase.Move)
-	go func() {
-		for move := range movesChan {
-			gameAi.UpdateOpponentMove(move)
-			if currentGame.trumpCard != nil && len(currentGame.hand) == 5 &&
-				len(currentGame.opponentHand) == 5 {
-				// TODO
-			}
-			opponentMove := gameAi.GetMove()
-			currentGame.opponentHand.RemoveCard(opponentMove.Card)
-			if currentGame.cardPlayed == nil {
-				currentGame.cardPlayed = &opponentMove.Card
-			} else {
-				playResponse(&opponentMove.Card)
-			}
+func (g *game) startAI() {
+	for move := range g.movesChan {
+		g.ai.UpdateOpponentMove(move)
+		if g.trumpCard != nil && len(g.hand) == 5 &&
+			len(g.opponentHand) == 5 {
+			// TODO
 		}
-	}()
+		opponentMove := g.ai.GetMove()
+		g.opponentHand.RemoveCard(opponentMove.Card)
+		if g.cardPlayed == nil {
+			g.cardPlayed = &opponentMove.Card
+		} else {
+			g.playResponse(&opponentMove.Card)
+		}
+	}
+}
 
-	if err := ebiten.Run(update, 960, 720, 1, "Hello world!"); err != nil {
+func (g *game) Start() {
+	go g.startAI()
+
+	if err := ebiten.Run(g.update, 960, 720, 1, "Santase"); err != nil {
 		panic(err)
 	}
+}
+
+func main() {
+	game := NewGame()
+	game.Start()
 }
