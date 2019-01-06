@@ -84,19 +84,20 @@ func (c *card) intersects(x, y int) bool {
 }
 
 type game struct {
-	trump          santase.Suit
-	hand           santase.Hand
-	opponentHand   santase.Hand
-	trumpCard      *santase.Card
-	stack          []santase.Card
-	cardPlayed     *santase.Card
-	response       *santase.Card
-	isOpponentMove bool
-	blockUI        bool
-	cards          map[santase.Card]*ebiten.Image
-	backCard       *ebiten.Image
-	movesChan      chan santase.Move
-	ai             santase.Game
+	trump               santase.Suit
+	hand                santase.Hand
+	opponentHand        santase.Hand
+	trumpCard           *santase.Card
+	stack               []santase.Card
+	cardPlayed          *santase.Card
+	response            *santase.Card
+	opponentPlayedFirst bool
+	isOpponentMove      bool
+	blockUI             bool
+	cards               map[santase.Card]*ebiten.Image
+	backCard            *ebiten.Image
+	movesChan           chan santase.Move
+	ai                  santase.Game
 }
 
 func NewGame() game {
@@ -230,11 +231,23 @@ func (g *game) update(screen *ebiten.Image) error {
 	}
 
 	if g.cardPlayed != nil {
-		objects = append(objects, g.newCard(g.cardPlayed, 540, 360, 0, false))
+		var x, y int
+		if g.opponentPlayedFirst {
+			x, y = 500, 340
+		} else {
+			x, y = 540, 360
+		}
+		objects = append(objects, g.newCard(g.cardPlayed, x, y, 0, false))
 	}
 
 	if g.response != nil {
-		objects = append(objects, g.newCard(g.response, 500, 340, 1, false))
+		var x, y int
+		if g.opponentPlayedFirst {
+			x, y = 540, 360
+		} else {
+			x, y = 500, 340
+		}
+		objects = append(objects, g.newCard(g.response, x, y, 1, false))
 	}
 
 	x, y := ebiten.CursorPosition()
@@ -251,6 +264,7 @@ func (g *game) update(screen *ebiten.Image) error {
 			g.isOpponentMove = true
 			g.hand.RemoveCard(*selected.card)
 			if g.cardPlayed == nil {
+				g.opponentPlayedFirst = false
 				g.cardPlayed = selected.card
 			} else {
 				g.playResponse(selected.card)
