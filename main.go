@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"os"
 	"sort"
+	"time"
 
 	"github.com/hajimehoshi/ebiten"
 
@@ -63,7 +64,9 @@ type game struct {
 	trumpCard      *santase.Card
 	stack          []santase.Card
 	cardPlayed     *santase.Card
+	response       *santase.Card
 	isOpponentMove bool
+	blockUI        bool
 }
 
 func newGame() game {
@@ -82,7 +85,9 @@ func newGame() game {
 		trumpCard:      &allCards[12],
 		stack:          allCards[13:],
 		cardPlayed:     nil,
+		response:       nil,
 		isOpponentMove: false,
+		blockUI:        false,
 	}
 }
 
@@ -123,7 +128,7 @@ type Card struct {
 func NewCard(card *santase.Card, x, y, z int, flipped bool) *Card {
 	var img *ebiten.Image
 	if !currentGame.hand.HasCard(*card) && card != currentGame.trumpCard &&
-		card != currentGame.cardPlayed {
+		card != currentGame.cardPlayed && card != currentGame.response {
 		img = backCard
 	} else {
 		img = cards[*card]
@@ -168,6 +173,19 @@ func (c *Card) Intersects(x, y int) bool {
 var cards = make(map[santase.Card]*ebiten.Image)
 var backCard *ebiten.Image
 var currentGame game
+var gameAi santase.Game
+var movesChan chan santase.Move
+
+func playResponse(card *santase.Card) {
+	currentGame.response = card
+	currentGame.blockUI = true
+	go func() {
+		<-time.After(2 * time.Second)
+		currentGame.blockUI = false
+		currentGame.cardPlayed = nil
+		currentGame.response = nil
+	}()
+}
 
 func update(screen *ebiten.Image) error {
 	screen.Fill(color.NRGBA{0x00, 0xaa, 0x00, 0xff})
@@ -202,6 +220,10 @@ func update(screen *ebiten.Image) error {
 		objects = append(objects, NewCard(currentGame.cardPlayed, 540, 360, 0, false))
 	}
 
+	if currentGame.response != nil {
+		objects = append(objects, NewCard(currentGame.response, 500, 340, 1, false))
+	}
+
 	x, y := ebiten.CursorPosition()
 
 	var selected *Card
@@ -211,15 +233,17 @@ func update(screen *ebiten.Image) error {
 		}
 	}
 
-	if selected != nil && ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+	if selected != nil && !currentGame.blockUI && ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
 		if !currentGame.isOpponentMove && currentGame.hand.HasCard(*selected.card) {
+			currentGame.isOpponentMove = true
+			currentGame.hand.RemoveCard(*selected.card)
 			if currentGame.cardPlayed == nil {
-				currentGame.isOpponentMove = true
 				currentGame.cardPlayed = selected.card
-				currentGame.hand.RemoveCard(*selected.card)
 			} else {
-
+				playResponse(selected.card)
 			}
+			move := santase.NewMove(*selected.card)
+			movesChan <- move
 		}
 	}
 
@@ -242,6 +266,24 @@ func main() {
 	backCard = createImageFromPath("assets/red_back.png")
 
 	currentGame = newGame()
+	gameAi = santase.CreateGame(currentGame.opponentHand, *currentGame.trumpCard, !currentGame.isOpponentMove)
+	movesChan = make(chan santase.Move)
+	go func() {
+		for move := range movesChan {
+			gameAi.UpdateOpponentMove(move)
+			if currentGame.trumpCard != nil && len(currentGame.hand) == 5 &&
+				len(currentGame.opponentHand) == 5 {
+				// TODO
+			}
+			opponentMove := gameAi.GetMove()
+			currentGame.opponentHand.RemoveCard(opponentMove.Card)
+			if currentGame.cardPlayed == nil {
+				currentGame.cardPlayed = &opponentMove.Card
+			} else {
+				playResponse(&opponentMove.Card)
+			}
+		}
+	}()
 
 	if err := ebiten.Run(update, 960, 720, 1, "Hello world!"); err != nil {
 		panic(err)
