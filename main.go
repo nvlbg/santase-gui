@@ -122,7 +122,8 @@ type Card struct {
 
 func NewCard(card *santase.Card, x, y, z int, flipped bool) *Card {
 	var img *ebiten.Image
-	if !currentGame.hand.HasCard(*card) && card != currentGame.trumpCard {
+	if !currentGame.hand.HasCard(*card) && card != currentGame.trumpCard &&
+		card != currentGame.cardPlayed {
 		img = backCard
 	} else {
 		img = cards[*card]
@@ -171,10 +172,6 @@ var currentGame game
 func update(screen *ebiten.Image) error {
 	screen.Fill(color.NRGBA{0x00, 0xaa, 0x00, 0xff})
 
-	x, y := ebiten.CursorPosition()
-	// if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
-	// }
-
 	var objects []*Card
 	cardX := 270
 	z := 0
@@ -201,10 +198,28 @@ func update(screen *ebiten.Image) error {
 		objects = append(objects, NewCard(&currentGame.stack[0], 84, 360, 1, false))
 	}
 
+	if currentGame.cardPlayed != nil {
+		objects = append(objects, NewCard(currentGame.cardPlayed, 540, 360, 0, false))
+	}
+
+	x, y := ebiten.CursorPosition()
+
 	var selected *Card
 	for _, obj := range objects {
 		if obj.Intersects(x, y) && (selected == nil || selected.zIndex < obj.zIndex) {
 			selected = obj
+		}
+	}
+
+	if selected != nil && ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+		if !currentGame.isOpponentMove && currentGame.hand.HasCard(*selected.card) {
+			if currentGame.cardPlayed == nil {
+				currentGame.isOpponentMove = true
+				currentGame.cardPlayed = selected.card
+				currentGame.hand.RemoveCard(*selected.card)
+			} else {
+
+			}
 		}
 	}
 
