@@ -179,17 +179,21 @@ func update(screen *ebiten.Image) error {
 	cardX := 270
 	z := 0
 	for _, card := range currentGame.getHand() {
-		objects = append(objects, NewCard(&card, cardX, 600, z, false))
-		cardX += 80
-		z++
+		func(card santase.Card) {
+			objects = append(objects, NewCard(&card, cardX, 600, z, false))
+			cardX += 80
+			z++
+		}(card)
 	}
 
 	cardX = 270
 	z = 0
 	for _, card := range currentGame.getOpponentHand() {
-		objects = append(objects, NewCard(&card, cardX, 120, z, false))
-		cardX += 80
-		z++
+		func(card santase.Card) {
+			objects = append(objects, NewCard(&card, cardX, 120, z, false))
+			cardX += 80
+			z++
+		}(card)
 	}
 
 	if currentGame.trumpCard != nil {
