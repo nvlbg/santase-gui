@@ -87,6 +87,7 @@ type game struct {
 	opponentPlayedFirst bool
 	isOpponentMove      bool
 	blockUI             bool
+	switchTrumpCard     bool
 	cards               map[santase.Card]*ebiten.Image
 	backCard            *ebiten.Image
 	userMoves           chan santase.Move
@@ -327,13 +328,27 @@ func (g *game) update(screen *ebiten.Image) error {
 				}
 			}
 
-			if isAnnouncement {
+			if isAnnouncement && g.switchTrumpCard {
+				move = santase.NewMoveWithAnnouncementAndTrumpCardSwitch(*selected.card)
+				g.switchTrumpCard = false
+			} else if g.switchTrumpCard {
+				move = santase.NewMoveWithTrumpCardSwitch(*selected.card)
+				g.switchTrumpCard = false
+			} else if isAnnouncement {
 				move = santase.NewMoveWithAnnouncement(*selected.card)
 			} else {
 				move = santase.NewMove(*selected.card)
 			}
 
 			g.userMoves <- move
+		} else if selected.card == g.trumpCard && len(g.stack) > 1 && len(g.stack) < 11 {
+			nineTrump := santase.NewCard(santase.Nine, g.trump)
+			if g.hand.HasCard(nineTrump) {
+				g.hand.RemoveCard(nineTrump)
+				g.hand.AddCard(*g.trumpCard)
+				g.trumpCard = &nineTrump
+				g.switchTrumpCard = true
+			}
 		}
 	}
 
