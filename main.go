@@ -114,7 +114,7 @@ func NewGame() game {
 		allCards = append(allCards, card)
 	}
 
-	rng := rand.New(rand.NewSource(20))
+	rng := rand.New(rand.NewSource(42))
 	rng.Shuffle(len(allCards), func(i, j int) {
 		allCards[i], allCards[j] = allCards[j], allCards[i]
 	})
@@ -442,14 +442,14 @@ func (g *game) update(screen *ebiten.Image) error {
 		obj.draw(screen)
 	}
 
-	text.Draw(screen, "Score:"+strconv.Itoa(g.score), g.fontFace, 780, 680, color.White)
+	text.Draw(screen, "Score:"+strconv.Itoa(g.score), g.fontFace, 760, 680, color.White)
 
 	if g.trumpCard != nil {
 		text.Draw(screen, strconv.Itoa(1+len(g.stack))+" cards", g.fontFaceSmall, 20, 490, color.White)
 	}
 
 	if g.debugMode {
-		text.Draw(screen, "Score:"+strconv.Itoa(g.opponentScore), g.fontFace, 780, 40, color.White)
+		text.Draw(screen, "Score:"+strconv.Itoa(g.opponentScore), g.fontFace, 760, 40, color.White)
 	}
 
 	if g.announcement != 0 {
