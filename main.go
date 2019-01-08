@@ -453,10 +453,13 @@ func (g *game) update(screen *ebiten.Image) error {
 func (g *game) playAIMove() {
 	opponentMove := g.ai.GetMove()
 	if opponentMove.SwitchTrumpCard {
+		g.blockUI = true
 		nineTrump := santase.NewCard(santase.Nine, g.trump)
 		g.opponentHand.RemoveCard(nineTrump)
 		g.opponentHand.AddCard(*g.trumpCard)
 		g.trumpCard = &nineTrump
+		<-time.After(2 * time.Second)
+		g.blockUI = false
 	}
 	if opponentMove.IsAnnouncement {
 		if opponentMove.Card.Suit == g.trump {
