@@ -311,7 +311,8 @@ func (g *game) update(screen *ebiten.Image) error {
 		if g.hand.HasCard(*selected.card) {
 			var move santase.Move
 			var isAnnouncement bool
-			if selected.card.Rank == santase.Queen || selected.card.Rank == santase.King {
+			if (selected.card.Rank == santase.Queen || selected.card.Rank == santase.King) &&
+				g.cardPlayed == nil && len(g.stack) < 11 {
 				var other santase.Card
 				if selected.card.Rank == santase.Queen {
 					other = santase.NewCard(santase.King, selected.card.Suit)
