@@ -1,19 +1,21 @@
 package main
 
 import (
-	"fmt"
 	"image"
 	"image/color"
 	"math/rand"
 	"sort"
+	"strconv"
 	"time"
 
+	"github.com/golang/freetype/truetype"
 	"github.com/hajimehoshi/ebiten"
 	"github.com/hajimehoshi/ebiten/ebitenutil"
 	"github.com/hajimehoshi/ebiten/text"
-	"golang.org/x/image/font/inconsolata"
+	"golang.org/x/image/font"
 
 	"santase"
+	"santasegui/assets/fonts"
 )
 
 var ranks = map[santase.Rank]string{
@@ -92,6 +94,10 @@ type game struct {
 	backCard            *ebiten.Image
 	userMoves           chan santase.Move
 	ai                  santase.Game
+	fontFace            font.Face
+	fontFaceSmall       font.Face
+	debugMode           bool
+	debugBtnPressedFlag bool
 }
 
 func NewGame() game {
@@ -106,7 +112,7 @@ func NewGame() game {
 		allCards = append(allCards, card)
 	}
 
-	rng := rand.New(rand.NewSource(10))
+	rng := rand.New(rand.NewSource(20))
 	rng.Shuffle(len(allCards), func(i, j int) {
 		allCards[i], allCards[j] = allCards[j], allCards[i]
 	})
@@ -118,22 +124,33 @@ func NewGame() game {
 	isOpponentMove := false
 	ai := santase.CreateGame(aiHand, *trumpCard, !isOpponentMove)
 
+	font, err := truetype.Parse(fonts.ArcadeTTF)
+	if err != nil {
+		panic(err)
+	}
+	face := truetype.NewFace(font, &truetype.Options{Size: 22})
+	smallFace := truetype.NewFace(font, &truetype.Options{Size: 16})
+
 	return game{
-		score:          0,
-		opponentScore:  0,
-		trump:          allCards[12].Suit,
-		hand:           hand,
-		opponentHand:   opponentHand,
-		trumpCard:      trumpCard,
-		stack:          allCards[13:],
-		cardPlayed:     nil,
-		response:       nil,
-		isOpponentMove: isOpponentMove,
-		blockUI:        false,
-		cards:          cards,
-		backCard:       backCard,
-		userMoves:      make(chan santase.Move),
-		ai:             ai,
+		score:               0,
+		opponentScore:       0,
+		trump:               allCards[12].Suit,
+		hand:                hand,
+		opponentHand:        opponentHand,
+		trumpCard:           trumpCard,
+		stack:               allCards[13:],
+		cardPlayed:          nil,
+		response:            nil,
+		isOpponentMove:      isOpponentMove,
+		blockUI:             false,
+		cards:               cards,
+		backCard:            backCard,
+		userMoves:           make(chan santase.Move),
+		ai:                  ai,
+		fontFace:            face,
+		fontFaceSmall:       smallFace,
+		debugMode:           false,
+		debugBtnPressedFlag: false,
 	}
 }
 
@@ -163,7 +180,7 @@ func (g *game) getOpponentHand() []santase.Card {
 
 func (g *game) newCard(c *santase.Card, x, y, z int, flipped bool) *card {
 	var img *ebiten.Image
-	if !g.hand.HasCard(*c) && c != g.trumpCard && c != g.cardPlayed && c != g.response {
+	if !g.hand.HasCard(*c) && c != g.trumpCard && c != g.cardPlayed && c != g.response && !g.debugMode {
 		img = g.backCard
 	} else {
 		img = g.cards[*c]
@@ -296,7 +313,6 @@ func (g *game) isCardLegal(card santase.Card) bool {
 }
 
 func (g *game) update(screen *ebiten.Image) error {
-	fmt.Println(g.score, g.opponentScore)
 	screen.Fill(color.NRGBA{0x00, 0xaa, 0x00, 0xff})
 
 	var objects []*card
@@ -322,7 +338,7 @@ func (g *game) update(screen *ebiten.Image) error {
 
 	if g.trumpCard != nil {
 		objects = append(objects, g.newCard(g.trumpCard, 120, 360, 0, true))
-		objects = append(objects, g.newCard(&g.stack[0], 84, 360, 1, false))
+		objects = append(objects, g.newCard(&g.stack[len(g.stack)-1], 84, 360, 1, false))
 	}
 
 	if g.cardPlayed != nil {
@@ -353,6 +369,12 @@ func (g *game) update(screen *ebiten.Image) error {
 			selected = obj
 		}
 	}
+
+	if !g.debugBtnPressedFlag && ebiten.IsKeyPressed(ebiten.KeyF12) {
+		g.debugBtnPressedFlag = ebiten.IsKeyPressed(ebiten.KeyF12)
+		g.debugMode = !g.debugMode
+	}
+	g.debugBtnPressedFlag = ebiten.IsKeyPressed(ebiten.KeyF12)
 
 	if selected != nil && !g.blockUI && !g.isOpponentMove &&
 		ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
@@ -415,8 +437,15 @@ func (g *game) update(screen *ebiten.Image) error {
 		obj.draw(screen)
 	}
 
-	// text.Draw(screen, string(g.score), inconsolata.Bold8x16, 850, 620, color.White)
-	text.Draw(screen, "asdf", inconsolata.Bold8x16, 0, 0, color.White)
+	text.Draw(screen, "Score:"+strconv.Itoa(g.score), g.fontFace, 780, 680, color.White)
+
+	if g.trumpCard != nil {
+		text.Draw(screen, strconv.Itoa(1+len(g.stack))+" cards", g.fontFaceSmall, 20, 490, color.White)
+	}
+
+	if g.debugMode {
+		text.Draw(screen, "Score:"+strconv.Itoa(g.opponentScore), g.fontFace, 780, 40, color.White)
+	}
 
 	return nil
 }
