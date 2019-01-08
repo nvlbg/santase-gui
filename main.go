@@ -355,7 +355,7 @@ func (g *game) update(screen *ebiten.Image) error {
 		}
 	}
 
-	if selected != nil && g.hand.HasCard(*selected.card) {
+	if selected != nil && !g.isOpponentMove && !g.blockUI && g.hand.HasCard(*selected.card) {
 		selected.y -= 20
 		selected.rect.Sub(image.Pt(0, -20))
 	}
