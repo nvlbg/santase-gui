@@ -96,8 +96,10 @@ type game struct {
 	ai                  santase.Game
 	fontFace            font.Face
 	fontFaceSmall       font.Face
+	fontFaceBig         font.Face
 	debugMode           bool
 	debugBtnPressedFlag bool
+	announcement        int
 }
 
 func NewGame() game {
@@ -130,6 +132,7 @@ func NewGame() game {
 	}
 	face := truetype.NewFace(font, &truetype.Options{Size: 22})
 	smallFace := truetype.NewFace(font, &truetype.Options{Size: 16})
+	bigFace := truetype.NewFace(font, &truetype.Options{Size: 50})
 
 	return game{
 		score:               0,
@@ -149,8 +152,10 @@ func NewGame() game {
 		ai:                  ai,
 		fontFace:            face,
 		fontFaceSmall:       smallFace,
+		fontFaceBig:         bigFace,
 		debugMode:           false,
 		debugBtnPressedFlag: false,
+		announcement:        0,
 	}
 }
 
@@ -447,6 +452,16 @@ func (g *game) update(screen *ebiten.Image) error {
 		text.Draw(screen, "Score:"+strconv.Itoa(g.opponentScore), g.fontFace, 780, 40, color.White)
 	}
 
+	if g.announcement != 0 {
+		var x, y int
+		if g.isOpponentMove {
+			x, y = 650, 450
+		} else {
+			x, y = 275, 300
+		}
+		text.Draw(screen, strconv.Itoa(g.announcement), g.fontFaceBig, x, y, color.NRGBA{0xff, 0x00, 0x00, 0xff})
+	}
+
 	return nil
 }
 
@@ -464,9 +479,13 @@ func (g *game) playAIMove() {
 	if opponentMove.IsAnnouncement {
 		if opponentMove.Card.Suit == g.trump {
 			g.opponentScore += 40
+			g.announcement = 40
 		} else {
 			g.opponentScore += 20
+			g.announcement = 20
 		}
+	} else {
+		g.announcement = 0
 	}
 	g.opponentHand.RemoveCard(opponentMove.Card)
 
@@ -482,6 +501,15 @@ func (g *game) playAIMove() {
 func (g *game) handleUserMoves() {
 	for move := range g.userMoves {
 		g.hand.RemoveCard(move.Card)
+		if move.IsAnnouncement {
+			if move.Card.Suit == g.trump {
+				g.announcement = 40
+			} else {
+				g.announcement = 20
+			}
+		} else {
+			g.announcement = 0
+		}
 		g.ai.UpdateOpponentMove(move)
 
 		if g.cardPlayed == nil {
