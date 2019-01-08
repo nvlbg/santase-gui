@@ -105,7 +105,9 @@ func NewGame() game {
 	for _, card := range santase.AllCards {
 		allCards = append(allCards, card)
 	}
-	rand.Shuffle(len(allCards), func(i, j int) {
+
+	rng := rand.New(rand.NewSource(10))
+	rng.Shuffle(len(allCards), func(i, j int) {
 		allCards[i], allCards[j] = allCards[j], allCards[i]
 	})
 
