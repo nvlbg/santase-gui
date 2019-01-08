@@ -248,6 +248,53 @@ func (g *game) playResponse(card *santase.Card) {
 	}()
 }
 
+func (g *game) isCardLegal(card santase.Card) bool {
+	// you're first to play or the game is not closed
+	if g.cardPlayed == nil || g.trumpCard != nil {
+		return true
+	}
+
+	// playing stronger card of the requested suit
+	if card.Suit == g.cardPlayed.Suit && card.Rank > g.cardPlayed.Rank {
+		return true
+	}
+
+	if g.cardPlayed.Suit == card.Suit {
+		for c := range g.hand {
+			if c.Suit == g.cardPlayed.Suit && c.Rank > g.cardPlayed.Rank {
+				// you're holding stronger card of the same suit that you must play
+				return false
+			}
+		}
+		// you don't have stronger card of the same suit
+		return true
+	}
+
+	for c := range g.hand {
+		if c.Suit == g.cardPlayed.Suit {
+			// you're holding card of the requested suit that you must play
+			return false
+		}
+	}
+
+	if g.cardPlayed.Suit != g.trump && card.Suit == g.trump {
+		// you are forced to play trump card in this case
+		return true
+	}
+
+	if g.cardPlayed.Suit != g.trump {
+		for c := range g.hand {
+			if c.Suit == g.trump {
+				// you're holding a trump card that you should play
+				return false
+			}
+		}
+	}
+
+	// your move is valid
+	return true
+}
+
 func (g *game) update(screen *ebiten.Image) error {
 	fmt.Println(g.score, g.opponentScore)
 	screen.Fill(color.NRGBA{0x00, 0xaa, 0x00, 0xff})
@@ -309,8 +356,7 @@ func (g *game) update(screen *ebiten.Image) error {
 
 	if selected != nil && !g.blockUI && !g.isOpponentMove &&
 		ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
-		// TODO: check that selected card is allowed to be played
-		if g.hand.HasCard(*selected.card) {
+		if g.hand.HasCard(*selected.card) && g.isCardLegal(*selected.card) {
 			var move santase.Move
 			var isAnnouncement bool
 			if (selected.card.Rank == santase.Queen || selected.card.Rank == santase.King) &&
@@ -355,7 +401,8 @@ func (g *game) update(screen *ebiten.Image) error {
 		}
 	}
 
-	if selected != nil && !g.isOpponentMove && !g.blockUI && g.hand.HasCard(*selected.card) {
+	if selected != nil && !g.isOpponentMove && !g.blockUI &&
+		g.hand.HasCard(*selected.card) && g.isCardLegal(*selected.card) {
 		selected.y -= 20
 		selected.rect.Sub(image.Pt(0, -20))
 	}
