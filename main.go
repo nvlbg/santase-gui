@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	"math/rand"
@@ -79,6 +80,7 @@ func (c *card) intersects(x, y int) bool {
 type game struct {
 	score               int
 	opponentScore       int
+	isOver              bool
 	trump               santase.Suit
 	hand                santase.Hand
 	opponentHand        santase.Hand
@@ -137,6 +139,7 @@ func NewGame() game {
 	return game{
 		score:               0,
 		opponentScore:       0,
+		isOver:              false,
 		trump:               allCards[12].Suit,
 		hand:                hand,
 		opponentHand:        opponentHand,
@@ -266,6 +269,10 @@ func (g *game) playResponse(card *santase.Card) {
 			g.score += handPoints
 		}
 
+		if g.score >= 66 || g.opponentScore >= 66 {
+			g.isOver = true
+		}
+
 		g.blockUI = false
 	}()
 }
@@ -319,6 +326,29 @@ func (g *game) isCardLegal(card santase.Card) bool {
 
 func (g *game) update(screen *ebiten.Image) error {
 	screen.Fill(color.NRGBA{0x00, 0xaa, 0x00, 0xff})
+
+	if g.isOver {
+		if ebiten.IsDrawingSkipped() {
+			return nil
+		}
+
+		var message string
+		if g.score > g.opponentScore && g.score >= 66 {
+			message = "You win!"
+		} else if g.opponentScore > g.score && g.opponentScore >= 66 {
+			message = "You lose!"
+		} else if g.isOpponentMove {
+			message = "You lose!"
+		} else {
+			message = "You win!"
+		}
+
+		text.Draw(screen, message, g.fontFaceBig, 300, 300, color.NRGBA{0xff, 0xff, 0xff, 0xff})
+
+		scores := fmt.Sprintf("%3s %3s", strconv.Itoa(g.score), strconv.Itoa(g.opponentScore))
+		text.Draw(screen, scores, g.fontFaceBig, 300, 360, color.NRGBA{0xff, 0xff, 0xff, 0xff})
+		return nil
+	}
 
 	var objects []*card
 	cardX := 270
@@ -484,6 +514,10 @@ func (g *game) playAIMove() {
 			g.opponentScore += 20
 			g.announcement = 20
 		}
+
+		if g.opponentScore >= 66 {
+			g.isOver = true
+		}
 	} else {
 		g.announcement = 0
 	}
@@ -506,6 +540,11 @@ func (g *game) handleUserMoves() {
 				g.announcement = 40
 			} else {
 				g.announcement = 20
+			}
+
+			if g.score >= 66 {
+				g.isOver = true
+				return
 			}
 		} else {
 			g.announcement = 0
