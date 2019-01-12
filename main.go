@@ -16,7 +16,7 @@ import (
 	santase "github.com/nvlbg/santase-ai"
 	"golang.org/x/image/font"
 
-	"santasegui/assets/fonts"
+	"github.com/nvlbg/santase-gui/assets/fonts"
 )
 
 var ranks = map[santase.Rank]string{
