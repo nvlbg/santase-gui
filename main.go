@@ -13,9 +13,9 @@ import (
 	"github.com/hajimehoshi/ebiten"
 	"github.com/hajimehoshi/ebiten/ebitenutil"
 	"github.com/hajimehoshi/ebiten/text"
+	santase "github.com/nvlbg/santase-ai"
 	"golang.org/x/image/font"
 
-	"santase"
 	"santasegui/assets/fonts"
 )
 
