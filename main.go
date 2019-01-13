@@ -126,7 +126,7 @@ func NewGame() game {
 	aiHand := santase.NewHand(allCards[6:12]...)
 	trumpCard := &allCards[12]
 	isOpponentMove := false
-	ai := santase.CreateGame(aiHand, *trumpCard, !isOpponentMove)
+	ai := santase.CreateGame(aiHand, *trumpCard, !isOpponentMove, 0.7, 2*time.Second)
 
 	font, err := truetype.Parse(fonts.ArcadeTTF)
 	if err != nil {
