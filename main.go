@@ -81,6 +81,7 @@ type game struct {
 	score               int
 	opponentScore       int
 	isOver              bool
+	isClosed            bool
 	trump               santase.Suit
 	hand                santase.Hand
 	opponentHand        santase.Hand
@@ -92,6 +93,7 @@ type game struct {
 	isOpponentMove      bool
 	blockUI             bool
 	switchTrumpCard     bool
+	closeGame           bool
 	cards               map[santase.Card]*ebiten.Image
 	backCard            *ebiten.Image
 	userMoves           chan santase.Move
@@ -140,6 +142,7 @@ func NewGame() game {
 		score:               0,
 		opponentScore:       0,
 		isOver:              false,
+		isClosed:            false,
 		trump:               allCards[12].Suit,
 		hand:                hand,
 		opponentHand:        opponentHand,
@@ -149,6 +152,8 @@ func NewGame() game {
 		response:            nil,
 		isOpponentMove:      isOpponentMove,
 		blockUI:             false,
+		switchTrumpCard:     false,
+		closeGame:           false,
 		cards:               cards,
 		backCard:            backCard,
 		userMoves:           make(chan santase.Move),
@@ -189,6 +194,8 @@ func (g *game) getOpponentHand() []santase.Card {
 func (g *game) newCard(c *santase.Card, x, y, z int, flipped bool) *card {
 	var img *ebiten.Image
 	if !g.hand.HasCard(*c) && c != g.trumpCard && c != g.cardPlayed && c != g.response && !g.debugMode {
+		img = g.backCard
+	} else if g.isClosed && c == g.trumpCard && !g.debugMode {
 		img = g.backCard
 	} else {
 		img = g.cards[*c]
@@ -231,7 +238,7 @@ func (g *game) drawCard() santase.Card {
 }
 
 func (g *game) drawCards(aiWon bool) {
-	if g.trumpCard != nil && len(g.hand) == 5 && len(g.opponentHand) == 5 {
+	if g.trumpCard != nil && !g.isClosed && len(g.hand) == 5 && len(g.opponentHand) == 5 {
 		var opponentDrawnCard, playerDrawnCard santase.Card
 		if aiWon {
 			opponentDrawnCard, playerDrawnCard = g.drawCard(), g.drawCard()
@@ -279,7 +286,7 @@ func (g *game) playResponse(card *santase.Card) {
 
 func (g *game) isCardLegal(card santase.Card) bool {
 	// you're first to play or the game is not closed
-	if g.cardPlayed == nil || g.trumpCard != nil {
+	if g.cardPlayed == nil || (g.trumpCard != nil && !g.isClosed) {
 		return true
 	}
 
@@ -372,8 +379,13 @@ func (g *game) update(screen *ebiten.Image) error {
 	}
 
 	if g.trumpCard != nil {
-		objects = append(objects, g.newCard(g.trumpCard, 120, 360, 0, true))
-		objects = append(objects, g.newCard(&g.stack[len(g.stack)-1], 84, 360, 1, false))
+		if g.isClosed {
+			objects = append(objects, g.newCard(&g.stack[len(g.stack)-1], 84, 360, 0, false))
+			objects = append(objects, g.newCard(g.trumpCard, 120, 360, 1, true))
+		} else {
+			objects = append(objects, g.newCard(g.trumpCard, 120, 360, 0, true))
+			objects = append(objects, g.newCard(&g.stack[len(g.stack)-1], 84, 360, 1, false))
+		}
 	}
 
 	if g.cardPlayed != nil {
@@ -434,20 +446,26 @@ func (g *game) update(screen *ebiten.Image) error {
 				}
 			}
 
-			if isAnnouncement && g.switchTrumpCard {
-				move = santase.NewMoveWithAnnouncementAndTrumpCardSwitch(*selected.card)
+			move = santase.Move{
+				Card: *selected.card,
+			}
+
+			if g.switchTrumpCard {
+				move.SwitchTrumpCard = true
 				g.switchTrumpCard = false
-			} else if g.switchTrumpCard {
-				move = santase.NewMoveWithTrumpCardSwitch(*selected.card)
-				g.switchTrumpCard = false
-			} else if isAnnouncement {
-				move = santase.NewMoveWithAnnouncement(*selected.card)
-			} else {
-				move = santase.NewMove(*selected.card)
+			}
+
+			if isAnnouncement {
+				move.IsAnnouncement = true
+			}
+
+			if g.closeGame {
+				move.CloseGame = true
+				g.closeGame = false
 			}
 
 			g.userMoves <- move
-		} else if selected.card == g.trumpCard && len(g.stack) > 1 && len(g.stack) < 11 {
+		} else if !g.isClosed && selected.card == g.trumpCard && len(g.stack) > 1 && len(g.stack) < 11 {
 			nineTrump := santase.NewCard(santase.Nine, g.trump)
 			if g.hand.HasCard(nineTrump) {
 				g.hand.RemoveCard(nineTrump)
@@ -455,6 +473,9 @@ func (g *game) update(screen *ebiten.Image) error {
 				g.trumpCard = &nineTrump
 				g.switchTrumpCard = true
 			}
+		} else if !g.isClosed && len(g.stack) > 1 && len(g.stack) < 11 && selected.card == &g.stack[len(g.stack)-1] {
+			g.isClosed = true
+			g.closeGame = true
 		}
 	}
 
@@ -503,6 +524,12 @@ func (g *game) playAIMove() {
 		g.opponentHand.RemoveCard(nineTrump)
 		g.opponentHand.AddCard(*g.trumpCard)
 		g.trumpCard = &nineTrump
+		<-time.After(2 * time.Second)
+		g.blockUI = false
+	}
+	if opponentMove.CloseGame {
+		g.blockUI = true
+		g.isClosed = true
 		<-time.After(2 * time.Second)
 		g.blockUI = false
 	}
