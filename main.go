@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"image"
 	"image/color"
+	_ "image/png"
 	"math/rand"
 	"sort"
 	"strconv"
@@ -11,44 +13,26 @@ import (
 
 	"github.com/golang/freetype/truetype"
 	"github.com/hajimehoshi/ebiten"
-	"github.com/hajimehoshi/ebiten/ebitenutil"
 	"github.com/hajimehoshi/ebiten/text"
 	santase "github.com/nvlbg/santase-ai"
 	"golang.org/x/image/font"
 
+	cardAssets "github.com/nvlbg/santase-gui/assets/cards"
 	"github.com/nvlbg/santase-gui/assets/fonts"
 )
 
-var ranks = map[santase.Rank]string{
-	santase.Nine:  "9",
-	santase.Jack:  "J",
-	santase.Queen: "Q",
-	santase.King:  "K",
-	santase.Ten:   "10",
-	santase.Ace:   "A",
-}
-
-var suits = map[santase.Suit]string{
-	santase.Clubs:    "C",
-	santase.Diamonds: "D",
-	santase.Hearts:   "H",
-	santase.Spades:   "S",
-}
-
-func createImageFromPath(path string) *ebiten.Image {
-	image, _, err := ebitenutil.NewImageFromFile(path, ebiten.FilterLinear)
+func createImageFromBytes(data []byte) *ebiten.Image {
+	img, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
 		panic(err)
 	}
-	return image
-}
 
-func createImage(card santase.Card) *ebiten.Image {
-	rank := ranks[card.Rank]
-	suit := suits[card.Suit]
-	path := "assets/" + rank + suit + ".png"
+	result, err := ebiten.NewImageFromImage(img, ebiten.FilterLinear)
+	if err != nil {
+		panic(err)
+	}
 
-	return createImageFromPath(path)
+	return result
 }
 
 type card struct {
@@ -108,10 +92,36 @@ type game struct {
 
 func NewGame() game {
 	cards := make(map[santase.Card]*ebiten.Image)
-	for _, card := range santase.AllCards {
-		cards[card] = createImage(card)
-	}
-	backCard := createImageFromPath("assets/red_back.png")
+
+	cards[santase.NewCard(santase.Nine, santase.Clubs)] = createImageFromBytes(cardAssets.Card9C)
+	cards[santase.NewCard(santase.Jack, santase.Clubs)] = createImageFromBytes(cardAssets.CardJC)
+	cards[santase.NewCard(santase.Queen, santase.Clubs)] = createImageFromBytes(cardAssets.CardQC)
+	cards[santase.NewCard(santase.King, santase.Clubs)] = createImageFromBytes(cardAssets.CardKC)
+	cards[santase.NewCard(santase.Ten, santase.Clubs)] = createImageFromBytes(cardAssets.Card10C)
+	cards[santase.NewCard(santase.Ace, santase.Clubs)] = createImageFromBytes(cardAssets.CardAC)
+
+	cards[santase.NewCard(santase.Nine, santase.Diamonds)] = createImageFromBytes(cardAssets.Card9D)
+	cards[santase.NewCard(santase.Jack, santase.Diamonds)] = createImageFromBytes(cardAssets.CardJD)
+	cards[santase.NewCard(santase.Queen, santase.Diamonds)] = createImageFromBytes(cardAssets.CardQD)
+	cards[santase.NewCard(santase.King, santase.Diamonds)] = createImageFromBytes(cardAssets.CardKD)
+	cards[santase.NewCard(santase.Ten, santase.Diamonds)] = createImageFromBytes(cardAssets.Card10D)
+	cards[santase.NewCard(santase.Ace, santase.Diamonds)] = createImageFromBytes(cardAssets.CardAD)
+
+	cards[santase.NewCard(santase.Nine, santase.Hearts)] = createImageFromBytes(cardAssets.Card9H)
+	cards[santase.NewCard(santase.Jack, santase.Hearts)] = createImageFromBytes(cardAssets.CardJH)
+	cards[santase.NewCard(santase.Queen, santase.Hearts)] = createImageFromBytes(cardAssets.CardQH)
+	cards[santase.NewCard(santase.King, santase.Hearts)] = createImageFromBytes(cardAssets.CardKH)
+	cards[santase.NewCard(santase.Ten, santase.Hearts)] = createImageFromBytes(cardAssets.Card10H)
+	cards[santase.NewCard(santase.Ace, santase.Hearts)] = createImageFromBytes(cardAssets.CardAH)
+
+	cards[santase.NewCard(santase.Nine, santase.Spades)] = createImageFromBytes(cardAssets.Card9S)
+	cards[santase.NewCard(santase.Jack, santase.Spades)] = createImageFromBytes(cardAssets.CardJS)
+	cards[santase.NewCard(santase.Queen, santase.Spades)] = createImageFromBytes(cardAssets.CardQS)
+	cards[santase.NewCard(santase.King, santase.Spades)] = createImageFromBytes(cardAssets.CardKS)
+	cards[santase.NewCard(santase.Ten, santase.Spades)] = createImageFromBytes(cardAssets.Card10S)
+	cards[santase.NewCard(santase.Ace, santase.Spades)] = createImageFromBytes(cardAssets.CardAS)
+
+	backCard := createImageFromBytes(cardAssets.CardBack)
 
 	allCards := make([]santase.Card, 0, 24)
 	for _, card := range santase.AllCards {
