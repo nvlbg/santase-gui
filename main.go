@@ -66,6 +66,7 @@ type game struct {
 	opponentScore       int
 	isOver              bool
 	isClosed            bool
+	opponentClosedGame  bool
 	trump               santase.Suit
 	hand                santase.Hand
 	opponentHand        santase.Hand
@@ -138,7 +139,7 @@ func NewGame() game {
 	aiHand := santase.NewHand(allCards[6:12]...)
 	trumpCard := &allCards[12]
 	isOpponentMove := false
-	ai := santase.CreateGame(aiHand, *trumpCard, !isOpponentMove, 0.7, 2*time.Second)
+	ai := santase.CreateGame(aiHand, *trumpCard, !isOpponentMove, 5.4, 2*time.Second)
 
 	font, err := truetype.Parse(fonts.ArcadeTTF)
 	if err != nil {
@@ -153,6 +154,7 @@ func NewGame() game {
 		opponentScore:       0,
 		isOver:              false,
 		isClosed:            false,
+		opponentClosedGame:  false,
 		trump:               allCards[12].Suit,
 		hand:                hand,
 		opponentHand:        opponentHand,
@@ -272,25 +274,31 @@ func (g *game) playResponse(card *santase.Card) {
 		aiWon := (g.opponentPlayedFirst && stronger == g.cardPlayed) ||
 			(!g.opponentPlayedFirst && stronger == g.response)
 
-		g.drawCards(aiWon)
 		handPoints := santase.Points(g.cardPlayed) + santase.Points(g.response)
 		g.cardPlayed = nil
 		g.response = nil
 
 		if aiWon {
-			g.isOpponentMove = true
 			g.opponentScore += handPoints
-			g.playAIMove()
 		} else {
-			g.isOpponentMove = false
 			g.score += handPoints
 		}
 
-		if g.score >= 66 || g.opponentScore >= 66 {
+		if g.score >= 66 || g.opponentScore >= 66 ||
+			((g.isClosed || len(g.stack) == 0) && len(g.hand) == 0) {
 			g.isOver = true
-		}
+		} else {
+			g.drawCards(aiWon)
 
-		g.blockUI = false
+			if aiWon {
+				g.isOpponentMove = true
+				g.playAIMove()
+			} else {
+				g.isOpponentMove = false
+			}
+
+			g.blockUI = false
+		}
 	}()
 }
 
@@ -354,6 +362,12 @@ func (g *game) update(screen *ebiten.Image) error {
 			message = "You win!"
 		} else if g.opponentScore > g.score && g.opponentScore >= 66 {
 			message = "You lose!"
+		} else if g.isClosed {
+			if g.opponentClosedGame {
+				message = "You win!"
+			} else {
+				message = "You lose!"
+			}
 		} else if g.isOpponentMove {
 			message = "You lose!"
 		} else {
@@ -485,6 +499,7 @@ func (g *game) update(screen *ebiten.Image) error {
 			}
 		} else if !g.isClosed && len(g.stack) > 1 && len(g.stack) < 11 && selected.card == &g.stack[len(g.stack)-1] {
 			g.isClosed = true
+			g.opponentClosedGame = false
 			g.closeGame = true
 		}
 	}
@@ -540,6 +555,7 @@ func (g *game) playAIMove() {
 	if opponentMove.CloseGame {
 		g.blockUI = true
 		g.isClosed = true
+		g.opponentClosedGame = true
 		<-time.After(2 * time.Second)
 		g.blockUI = false
 	}
@@ -601,6 +617,10 @@ func (g *game) handleUserMoves() {
 
 func (g *game) Start() {
 	go g.handleUserMoves()
+
+	if g.isOpponentMove {
+		go g.playAIMove()
+	}
 
 	if err := ebiten.Run(g.update, 960, 720, 1, "Santase"); err != nil {
 		panic(err)
