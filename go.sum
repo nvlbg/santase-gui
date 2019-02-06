@@ -32,6 +32,8 @@ github.com/nvlbg/santase-ai v0.2.0 h1:JVDl3RczEdle17c2M5Bs6lqWXAztB4CwYc/59z9fQx
 github.com/nvlbg/santase-ai v0.2.0/go.mod h1:qCIw3JcPSWt2/wp9VSDwQw8UpyUOAPA2sQ/BbJACrn4=
 github.com/nvlbg/santase-ai v0.2.1 h1:aqUNPsg0M3qfMz9gyGtTTSXAPIikN0Lxdy9aszLEHE8=
 github.com/nvlbg/santase-ai v0.2.1/go.mod h1:qCIw3JcPSWt2/wp9VSDwQw8UpyUOAPA2sQ/BbJACrn4=
+github.com/nvlbg/santase-ai v0.3.0 h1:vWMgSw1+xgaXj3DatmPLYhEwrbl5NZK050U/a110AOU=
+github.com/nvlbg/santase-ai v0.3.0/go.mod h1:qCIw3JcPSWt2/wp9VSDwQw8UpyUOAPA2sQ/BbJACrn4=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stretchr/testify v1.2.2 h1:bSDNvY7ZPG5RlJ8otE/7V6gMiyenm9RtJ7IUVIAoJ1w=

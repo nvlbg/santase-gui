@@ -15,6 +15,7 @@ import (
 	"github.com/hajimehoshi/ebiten"
 	"github.com/hajimehoshi/ebiten/text"
 	santase "github.com/nvlbg/santase-ai"
+	"github.com/nvlbg/santase-ai/agents/ismcts"
 	"golang.org/x/image/font"
 
 	cardAssets "github.com/nvlbg/santase-gui/assets/cards"
@@ -139,7 +140,9 @@ func NewGame() game {
 	aiHand := santase.NewHand(allCards[6:12]...)
 	trumpCard := &allCards[12]
 	isOpponentMove := false
-	ai := santase.CreateGame(aiHand, *trumpCard, !isOpponentMove, 5.4, 2*time.Second)
+	ismctsAgent := ismcts.NewAgent(5.4, 2*time.Second)
+	ai := santase.CreateGame(aiHand, *trumpCard, !isOpponentMove)
+	ai.SetAgent(ismctsAgent)
 
 	font, err := truetype.Parse(fonts.ArcadeTTF)
 	if err != nil {
