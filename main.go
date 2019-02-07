@@ -273,43 +273,40 @@ func (g *game) drawCards(opponentWon bool) {
 func (g *game) playResponse(card *santase.Card) {
 	g.blockUI = true
 	g.response = card
+	<-time.After(2 * time.Second)
 
-	go func() {
-		<-time.After(2 * time.Second)
+	stronger := g.opponentAI.StrongerCard(g.cardPlayed, g.response)
+	opponentWon := (g.opponentPlayedFirst && stronger == g.cardPlayed) ||
+		(!g.opponentPlayedFirst && stronger == g.response)
 
-		stronger := g.opponentAI.StrongerCard(g.cardPlayed, g.response)
-		opponentWon := (g.opponentPlayedFirst && stronger == g.cardPlayed) ||
-			(!g.opponentPlayedFirst && stronger == g.response)
+	handPoints := santase.Points(g.cardPlayed) + santase.Points(g.response)
+	g.cardPlayed = nil
+	g.response = nil
 
-		handPoints := santase.Points(g.cardPlayed) + santase.Points(g.response)
-		g.cardPlayed = nil
-		g.response = nil
+	if opponentWon {
+		g.opponentScore += handPoints
+	} else {
+		g.score += handPoints
+	}
+
+	if g.score >= 66 || g.opponentScore >= 66 ||
+		((g.isClosed || len(g.stack) == 0) && len(g.hand) == 0) {
+		g.isOver = true
+	} else {
+		g.drawCards(opponentWon)
 
 		if opponentWon {
-			g.opponentScore += handPoints
+			g.isOpponentMove = true
+			g.playAIMove(true)
 		} else {
-			g.score += handPoints
-		}
-
-		if g.score >= 66 || g.opponentScore >= 66 ||
-			((g.isClosed || len(g.stack) == 0) && len(g.hand) == 0) {
-			g.isOver = true
-		} else {
-			g.drawCards(opponentWon)
-
-			if opponentWon {
-				g.isOpponentMove = true
-				g.playAIMove(true)
-			} else {
-				g.isOpponentMove = false
-				if g.playerAI != nil {
-					g.playAIMove(false)
-				}
+			g.isOpponentMove = false
+			if g.playerAI != nil {
+				g.playAIMove(false)
 			}
-
-			g.blockUI = false
 		}
-	}()
+
+		g.blockUI = false
+	}
 }
 
 func (g *game) isCardLegal(card santase.Card) bool {
