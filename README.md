@@ -2,7 +2,7 @@ Santase
 =======
 
 This is a GUI for the game of santase (also known as
-[sixty-six](https://en.wikipedia.org/wiki/Sixty-Six_(card_game\))).
+[sixty-six](https://en.wikipedia.org/wiki/Sixty-Six_(card_game)\)).
 
 ![Preview](https://raw.githubusercontent.com/nvlbg/santase-gui/master/assets/preview.png)
 
@@ -41,12 +41,11 @@ This way the local copy of santase-ai will be used when running the project.
 
 ### Use different AI agent
 By default the GUI will use the ISMCTS agent that comes with santase-ai for
-choosing the moves for one player and the user for choosing the moves
-for the other player. You can change the opponent agent in the main function
-to see how a different agent would play. Another possibility is to play two
-different AI agents against each other. All you need to do is initialize the
-other agent and pass it as a second argument to `NewGame` in the main function
-(there is commented example in the main function).
+choosing the moves for one player and the user for choosing the moves for the
+other player. You can change the opponent agent in the `main` function to see
+how a different agent would play. Another possibility is to play two different
+AI agents against each other. All you need to do is initialize the other agent
+and pass it as a second argument to `NewGame` in the `main` function.
 
 ### Replaying a game
 By default every time the project runs it generates a different game. Sometimes
