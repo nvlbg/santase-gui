@@ -133,7 +133,12 @@ func NewGame(opponentAgent santase.Agent, playerAgent *santase.Agent) game {
 		allCards = append(allCards, card)
 	}
 
-	rng := rand.New(rand.NewSource(42))
+	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	// you can seed your random number generator like so
+	// this way the same game will be repeated between runs
+	// rng := rand.New(rand.NewSource(42))
+
 	rng.Shuffle(len(allCards), func(i, j int) {
 		allCards[i], allCards[j] = allCards[j], allCards[i]
 	})
@@ -662,9 +667,15 @@ func (g *game) Start() {
 }
 
 func main() {
-	ismctsAgent := ismcts.NewAgent(5.4, 2*time.Second)
+	// initialize opponent agent
+	opponentAgent := ismcts.NewAgent(5.4, 2*time.Second)
+
+	// optionally initialize another agent to play two different
+	// AIs against each other
 	// randomAgent := random.NewAgent()
 	// game := NewGame(ismctsAgent, &randomAgent)
-	game := NewGame(ismctsAgent, nil)
+
+	// otherwise pass nil as second argument to let the user play
+	game := NewGame(opponentAgent, nil)
 	game.Start()
 }
