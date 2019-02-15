@@ -2,7 +2,7 @@ Santase
 =======
 
 This is a GUI for the game of santase (also known as
-[sixty-six](https://en.wikipedia.org/wiki/Sixty-Six_(card_game)\)).
+[sixty-six](https://en.wikipedia.org/wiki/Sixty-Six_(card_game))).
 
 ![Preview](https://raw.githubusercontent.com/nvlbg/santase-gui/master/assets/preview.png)
 
