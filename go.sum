@@ -10,6 +10,7 @@ github.com/gopherjs/gopherjs v0.0.0-20180628210949-0892b62f0d9f/go.mod h1:wJfORR
 github.com/gopherjs/gopherjs v0.0.0-20180825215210-0210a2f0f73c/go.mod h1:wJfORRmW1u3UXTncJ5qlYoELFm8eSnnEO6hX4iZ3EWY=
 github.com/gopherjs/gopherwasm v0.1.1/go.mod h1:kx4n9a+MzHH0BJJhvlsQ65hqLFXDO/m256AsaDPQ+/4=
 github.com/gopherjs/gopherwasm v1.0.0/go.mod h1:SkZ8z7CWBz5VXbhJel8TxCmAcsQqzgWGR/8nMhyhZSI=
+github.com/gopherjs/gopherwasm v1.0.1 h1:Gmj9RMDjh+P9EFzzQltoCtjAxR5mUkaJqaNPfeaNe2I=
 github.com/gopherjs/gopherwasm v1.0.1/go.mod h1:SkZ8z7CWBz5VXbhJel8TxCmAcsQqzgWGR/8nMhyhZSI=
 github.com/hajimehoshi/bitmapfont v1.1.1 h1:H1wQ6QXA8kSp+plARsIMCTVb5iOZHq/OP3uyL5NzLuU=
 github.com/hajimehoshi/bitmapfont v1.1.1/go.mod h1:Hamfxgney7tDSmVOSDh2AWzoDH70OaC+P24zc02Gum4=
@@ -36,6 +37,8 @@ github.com/nvlbg/santase-ai v0.3.0 h1:vWMgSw1+xgaXj3DatmPLYhEwrbl5NZK050U/a110AO
 github.com/nvlbg/santase-ai v0.3.0/go.mod h1:qCIw3JcPSWt2/wp9VSDwQw8UpyUOAPA2sQ/BbJACrn4=
 github.com/nvlbg/santase-ai v0.3.1 h1:aMq1+sMifaUca74ldEayzeaghHDq9oTdrLTs2ldKcHk=
 github.com/nvlbg/santase-ai v0.3.1/go.mod h1:qCIw3JcPSWt2/wp9VSDwQw8UpyUOAPA2sQ/BbJACrn4=
+github.com/nvlbg/santase-ai v1.0.0 h1:9m9Z4eGif9hPF64UaGvngMFhYOHnasSIqTTHYSxDkkw=
+github.com/nvlbg/santase-ai v1.0.0/go.mod h1:qCIw3JcPSWt2/wp9VSDwQw8UpyUOAPA2sQ/BbJACrn4=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stretchr/testify v1.2.2 h1:bSDNvY7ZPG5RlJ8otE/7V6gMiyenm9RtJ7IUVIAoJ1w=
